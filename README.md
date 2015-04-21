@@ -8,3 +8,5 @@ This repository holds all the codes we made participants write down in Python fo
 4. Crawl the whole website (after authentication).
 5. Search for an email id in every page. Use regex for this.
 6. This page has file upload functionality. Upload PHP file on this page.
+
+In Short write, a crawler with regex search option. :D
