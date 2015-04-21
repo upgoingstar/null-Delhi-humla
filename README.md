@@ -1,7 +1,7 @@
 # null-Delhi-humla
 This repository holds all the codes we made participants write down in Python for pentesters Humla Session
 
-#Final Challenge
+## Challange that participants solved.
 1. Take a list of URLs from url, using a file. 
 2. Read the file, hit URLs.
 3. Perform login in these URLs.
