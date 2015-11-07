@@ -3,10 +3,11 @@ from bs4 import BeautifulSoup
 from urlparse import urlparse
 
 # base_url is the URL to start crawling on.
-base_url = 'http://www.humla.com'
+base_url = 'http://192.168.56.101/'
 
 # Parse the URL so that we can use it for comparing domain name and checking URL paths
 base_parsed = urlparse(base_url)
+print base_parsed
 
 # Empty list to store all crawled links
 links = []
@@ -18,6 +19,7 @@ s = requests.Session()
 ## This function opens a URL using the session_object to maintain login session.
 ## After opening the URL, passes the HTML content to BeautifulSoup to parse HTML. 
 ## This function returns parsed HTML from BeautifulSoup if the URL returns a 200, else returns an empty BeautifulSoup object.
+
 
 def get_data(url, s):
 	# Parse the URL for analyzing the different parts
@@ -58,7 +60,6 @@ def get_data(url, s):
 	else:
 		return BeautifulSoup("")
 
-
 # FUNCTION: get_link(url, session_object)
 ## This function will return the links found in a URL.
 ## We will parse URL from <a> tag and <form> tag.
@@ -66,7 +67,8 @@ def get_data(url, s):
 ## From <form> tag we'll get the 'action' attribute.
 ## This function returns a list of URLs found in the page.
 
-def get_link(url, s):
+
+def get_link(url):
 	
 	# Open the URL using the session_object
 	page = s.get(url)
@@ -84,6 +86,7 @@ def get_link(url, s):
 			
 			# Iterating over each link we'll get the URL from href attribute
 			link = tag.get('href')
+			#print link
 			link = str(link).strip()
 			
 			# Since a page can have same URL in multiple locations like Header and Footer,
@@ -105,6 +108,7 @@ def get_link(url, s):
 
 
 
+
 ## -------- PROGRAM STARTS EXECUTION FROM HERE ---------- ##
 
 ## Step 1: LOGIN TO WEBSITE
@@ -118,25 +122,33 @@ post_data = {"login": "cust", "password": "cust", "btnlogin": "Login"}
 
 # We'll use the session object to make the post call since it will store the session information and therefore,
 # further requests will use this authenticated session object.
-login_response = s.post(login_url, data = post_data)
+login_response = s.post(login_url, data = post_data, allow_redirects=False)
+#print login_response
 
 # To check if successfully logged in, we'll check if a string on the page (after login) exists in the HTML content returned to us
-if "My Accounts" in login_response.content:
-	print "Login Successful"
 
-# If that string is not present, we'll print out a message and exit from the program 
-else:
-	print "Login Failed"
-	sys.exit(0)
+if (login_response.status_code == 302):
+	print login_response.headers['Location']
+	composed_url = "%s://%s/%s" % (base_parsed.scheme.strip(), base_parsed.netloc.strip(),login_response.headers['Location'])
+	checkauthreq = s.get(composed_url)
+	if "My Accounts" in checkauthreq.text:
+		print "Login SuccessFull"
+	# If that string is not present, we'll print out a message and exit from the program 
+	else:
+		print "Login Failed"
+		sys.exit(0)
+
 print ""
 
 # Step 2: Once logged in, let's open the base_url to find URLs on that page. We'll get a list of URLs in links
 print "Crawled URLs:"
-links = get_link(base_url, s)
+links = get_link(composed_url)
 
-# Stp 3: Iterate ove each link found on the page (base_url) and then crawl all links in the application
+
+
+# Stp 3: Iterate over each link found on the page (base_url) and then crawl all links in the application
 for r in links:
-	
+	#print r
 	# We will skip the logout URL, since that destroys the session, so we don't want to login again. So just skip it.
 	if "logout" in r:
 		continue
@@ -170,6 +182,7 @@ for r in links:
 	except:
 		pass
 
+
 # Step 4: One we have all URLs, time to find the exploitable URL
 
 # Initialize an empty String that will hold the exploitable URL from the crawled URLs
@@ -183,18 +196,22 @@ pattern = re.compile(regex)
 
 # Reaching here, `links` list will have all links crawled in the website, so we'll just print it out.
 for w in links:
-	url = "%s://%s/%s" % (base_parsed.scheme.strip(), base_parsed.netloc.strip(), w)
-	print url
+	#print w
+	url_parsed = urlparse(w)
+	if url_parsed.scheme:
+		finalurl = w
+	else:
+		url = "%s://%s/%s" % (base_parsed.scheme.strip(), base_parsed.netloc.strip(), w)
+		finalurl = url
+
+	print "trying %s" % url
 	response = s.get(url)
 	html = response.content
 
-	# search method on pattern will use the regex to search for an email in the HTML content
 	if pattern.search(html):
 		exploit_url = url
 
-# Step 5: Finally, print out the Exploitable URL
-print ""
-exploit = "| Expolit URL: %s |" % exploit_url
-print "+%s+" % ("-" * (len(exploit) - 2))
+exploit = "\n[+] | Expolit URL: %s |" % exploit_url
 print exploit
-print "+%s+" % ("-" * (len(exploit) - 2))
+
+
